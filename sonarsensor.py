@@ -3,6 +3,9 @@ import time
 import subprocess
 import os
 from pathlib import Path
+import multiprocessing
+
+from facecapture import FaceCapture  
 
 # Define GPIO pins
 trigPin = 4  # GP4
@@ -44,6 +47,13 @@ def remove_duplicate_files(file_name):
 		os.remove(raw)
 	if mp4.exists():
 		os.remove(os)	
+          
+# calls capture_frame_with_face() - used for multiprocessing of face capture
+def capture_face(video_path, face_pic_path):
+    print('Beginning face capture')
+    pic = FaceCapture(video_path, Path(f"CapturedFaces/{face_pic_path}.jpg"))
+    result = pic.capture_frame_with_face(40)
+    print('Face capture complete')
 
 try:
     while True:
@@ -123,8 +133,12 @@ try:
                 recording_process.wait()
 
                 subprocess.run(["ffmpeg", "-framerate", "60", "-i", str(video_path), "-c", "copy", str(mp4_path)])
-
                 print("Recording complete.")
+
+                face_pic_path = mp4_path.stem
+                face_capture_process = multiprocessing.Process(target=capture_face, args=(video_path, face_pic_path))
+                face_capture_process.start()
+
                 recording = False 
                 time_flag = False
 
